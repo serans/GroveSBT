@@ -1,5 +1,18 @@
-#include <GroveSBT.h>
+/**
+ * GroveSBT controler example
+ *
+ * Connects with a bluetooth device and acts as a bridge, sending everithing
+ * received via Serial port through BT, and vice versa.
+ *
+ * Hardware Setup:
+ * -Grove's Tx pin must be connected to Arduino's pin 10
+ * -Grove's Rx pin must be connected to Arduino's pin 11
+ *
+ * @author MH Serans
+ */
 #include <SoftwareSerial.h>
+#include <GroveSBT.h>
+
 
 void f_init() {Serial.println("BT initialized");}
 void f_ready() {
@@ -24,8 +37,6 @@ void setup() {
   groveSBT_onInquiring = f_inq;
   groveSBT_onConnected = f_cncted;
   groveSBT_onConnecting = f_cncting;
-
-//  groveSBT_inq();
   
 }
 
@@ -35,7 +46,8 @@ void loop() {
 
   if(groveSBT_available())
     Serial.print(groveSBT_read());
-  
-  if(Serial.available()) Serial.write(Serial.read());
+    
+  if(Serial.available())
+    groveSBT_write(Serial.read());
 
 }
