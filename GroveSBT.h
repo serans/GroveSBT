@@ -9,10 +9,11 @@
 
 #include <Arduino.h>
 #include <avr/pgmspace.h>
+#include <SoftwareSerial.h>
 #include "CircularBuffer.h"
 
-#define LF 0x0A
 #define CR 0x0D
+#define LF 0x0A
 
 #define BT_INIT         0
 #define BT_READY        1
@@ -21,7 +22,7 @@
 #define BT_CONNECTED    4
 
 #define BT_INPUT_INIT     0
-#define BT_INPUT_NL       1
+#define BT_INPUT_LF       1
 #define BT_INPUT_CR       2
 #define BT_INPUT_COMMAND  3
 
@@ -35,6 +36,12 @@
 
 //#define DEBUG(x) Serial.println(x)
 #define DEBUG(X) /* debug off */
+
+
+//use software serial
+static SoftwareSerial ss = SoftwareSerial(10,11);
+#define SERIAL_OUT(x) ss.write(x)
+#define SERIAL_IN     ss.read();
 
 static const char command_table[3][10] = { "OK", "BTSTATE:", "CONNECT:" };
 
@@ -60,6 +67,7 @@ char groveSBT_read();
 void groveSBT_print();
 void groveSBT_sendCommand();
 inline byte groveSBT_status() { return bt_status; }
+void groveSBT_inq();
 
 //callbacks
 static void dummy() {}
@@ -74,27 +82,30 @@ void (*groveSBT_onConnecting)() = dummy;
 //function to be called by the main program's loop
 char c;
 void groveSBT_loop() {
-    if(Serial.available()) {
-        c = Serial.read();
+    c = SERIAL_IN
+    if(c>0) {
         switch(bt_input_status) {
             case BT_INPUT_INIT:
-                if(c == CR) {bt_input_status = BT_INPUT_NL; DEBUG("LF");}
-                c_buffer_push(c, &buffer);
-                break;
-
-            case BT_INPUT_NL:
-                if(c == LF) {bt_input_status = BT_INPUT_CR; DEBUG("CR");}
-                else if(c != CR) bt_input_status = BT_INPUT_INIT;
-                c_buffer_push(c, &buffer);
+                if(c == CR) {bt_input_status = BT_INPUT_CR; DEBUG("CR");}
+                if(bt_status == BT_CONNECTED) c_buffer_push(c, &buffer);
                 break;
 
             case BT_INPUT_CR:
-                if(c == '+') {
+                if(c == LF) {bt_input_status = BT_INPUT_LF; DEBUG("LF");}
+                else if(c != CR) bt_input_status = BT_INPUT_INIT;
+                if(bt_status == BT_CONNECTED) c_buffer_push(c, &buffer);
+                break;
+
+            case BT_INPUT_LF:
+                if(c == CR) bt_input_status = BT_INPUT_CR;
+                else if(c == '+' || bt_status != BT_CONNECTED) {
+                    
                     bt_input_status = BT_INPUT_COMMAND;
                     commandBuffer.tail=0;
                     commandBuffer.data[0]='\0';
-                    DEBUG("+");
                 } else {
+                    DEBUG("no command found, instead:");
+                    DEBUG(c);
                     c_buffer_push(c, &buffer);
                     bt_input_status = BT_INPUT_INIT;
                 }
@@ -145,7 +156,11 @@ void interpretateCommand(char *command){
         DEBUG(i);DEBUG(j);
         if(i == COMMAND_INDEX_BTSTATE) {
             bt_status = atoi(&command[j]);
-            DEBUG("STATUS:");
+            if(bt_status<0 || bt_status>4) {
+		bt_status=1;
+		return;
+	    }
+	    DEBUG("STATUS:");
             DEBUG(bt_status);
             if(bt_status == BT_INIT)             groveSBT_onInit();
             else if (bt_status == BT_READY)      groveSBT_onReady();
@@ -167,6 +182,14 @@ char groveSBT_read() {
 }
 
 void groveSBT_print(char *txt) {
-    Serial.print(txt);
+    SERIAL_OUT(txt);
+}
+
+void groveSBT_init() {
+    ss.begin(9600);
+}
+
+void groveSBT_inq(){
+    SERIAL_OUT("\r\n+INQ=1\r\n");
 }
 #endif
