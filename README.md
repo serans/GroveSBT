@@ -3,6 +3,7 @@ GroveSBT
 
 Arduino controller for the [Grove Serial Bluetooth module](http://www.seeedstudio.com/wiki/Grove_-_Serial_Bluetooth)
 
+![GroveSBT](http://www.seeedstudio.com/wiki/images/thumb/6/66/Twigbt00.jpg/400px-Twigbt00.jpg "Grove Serial Bluetooth")
 
 
 Usage:
