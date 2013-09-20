@@ -86,26 +86,29 @@ void groveSBT_loop() {
     if(c>0) {
         switch(bt_input_status) {
             case BT_INPUT_INIT:
-                if(c == CR) {bt_input_status = BT_INPUT_CR; DEBUG("CR");}
-                if(bt_status == BT_CONNECTED) c_buffer_push(c, &buffer);
+                if(c == CR) 
+                    bt_input_status = BT_INPUT_CR;
+                if(bt_status == BT_CONNECTED) 
+                    c_buffer_push(c, &buffer);
                 break;
 
             case BT_INPUT_CR:
-                if(c == LF) {bt_input_status = BT_INPUT_LF; DEBUG("LF");}
-                else if(c != CR) bt_input_status = BT_INPUT_INIT;
-                if(bt_status == BT_CONNECTED) c_buffer_push(c, &buffer);
+                if(c == LF) 
+                    bt_input_status = BT_INPUT_LF;
+                else if(c != CR) 
+                    bt_input_status = BT_INPUT_INIT;
+                if(bt_status == BT_CONNECTED) 
+                    c_buffer_push(c, &buffer);
                 break;
 
             case BT_INPUT_LF:
-                if(c == CR) bt_input_status = BT_INPUT_CR;
+                if(c == CR) 
+                    bt_input_status = BT_INPUT_CR;
                 else if(c == '+' || bt_status != BT_CONNECTED) {
-                    
                     bt_input_status = BT_INPUT_COMMAND;
                     commandBuffer.tail=0;
                     commandBuffer.data[0]='\0';
                 } else {
-                    DEBUG("no command found, instead:");
-                    DEBUG(c);
                     c_buffer_push(c, &buffer);
                     bt_input_status = BT_INPUT_INIT;
                 }
@@ -113,7 +116,6 @@ void groveSBT_loop() {
             
             case BT_INPUT_COMMAND:
                 if(c == CR) {
-                    DEBUG("INTERPRETATE");
                     interpretateCommand(commandBuffer.data);
                     bt_input_status = BT_INPUT_INIT;
                 } else {
@@ -121,7 +123,6 @@ void groveSBT_loop() {
                         commandBuffer.data[commandBuffer.tail] = c;
                         commandBuffer.data[commandBuffer.tail+1] = '\0';
                         commandBuffer.tail++;
-                        DEBUG(c);
                     }
                 }
                 break;
@@ -157,18 +158,15 @@ void interpretateCommand(char *command){
         if(i == COMMAND_INDEX_BTSTATE) {
             bt_status = atoi(&command[j]);
             if(bt_status<0 || bt_status>4) {
-		bt_status=1;
-		return;
-	    }
-	    DEBUG("STATUS:");
-            DEBUG(bt_status);
-            if(bt_status == BT_INIT)             groveSBT_onInit();
-            else if (bt_status == BT_READY)      groveSBT_onReady();
-            else if (bt_status == BT_INQUIRING)  groveSBT_onInquiring();
-            else if (bt_status == BT_CONNECTING) groveSBT_onConnecting();
-            else if (bt_status == BT_CONNECTED)  groveSBT_onConnected();
-        }
+		        bt_status=1;
+		        return;
+	        }
 
+        if(bt_status == BT_INIT)             groveSBT_onInit();
+        else if (bt_status == BT_READY)      groveSBT_onReady();
+        else if (bt_status == BT_INQUIRING)  groveSBT_onInquiring();
+        else if (bt_status == BT_CONNECTING) groveSBT_onConnecting();
+        else if (bt_status == BT_CONNECTED)  groveSBT_onConnected();
 }
 
 boolean groveSBT_available() {
