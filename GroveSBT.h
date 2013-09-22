@@ -48,7 +48,7 @@ static const char command_table[3][10] = { "OK", "BTSTATE:", "CONNECT:" };
 static byte bt_status = BT_INIT;
 static byte bt_input_status = BT_INPUT_INIT;
 
-static circularBuffer buffer;
+static circularBuffer serialDataBuffer;
 
 static struct  {
     char data[COMMAND_BUFFER_LEN];
@@ -77,7 +77,6 @@ void (*groveSBT_onReady)()      = dummy;
 void (*groveSBT_onInquiring)()  = dummy;
 void (*groveSBT_onConnected)()  = dummy;
 void (*groveSBT_onConnecting)() = dummy;
-
 
 //function to be called by the main program's loop
 char c;
@@ -124,7 +123,7 @@ void groveSBT_loop() {
         }
         
         if(bt_input_status != BT_INPUT_COMMAND && bt_status == BT_CONNECTED)
-            c_buffer_push(c, &buffer);
+            c_buffer_push(c, &serialDataBuffer);
         
     }
 }
@@ -168,12 +167,12 @@ void interpretateCommand(char *command){
 }
 
 boolean groveSBT_available() {
-   return (c_buffer_len(&buffer)>0);
+   return (c_buffer_len(&serialDataBuffer)>0);
 }
 
 char groveSBT_read() {
     char c=-1;
-    c_buffer_pull(&c, &buffer);
+    c_buffer_pull(&c, &serialDataBuffer);
     return c;
 }
 
