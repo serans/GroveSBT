@@ -15,50 +15,67 @@
 #define CR 0x0D
 #define LF 0x0A
 
+/* Grove Serial Bluetooth Status */
 #define BT_INIT         0
 #define BT_READY        1
 #define BT_INQUIRING    2
 #define BT_CONNECTING   3
 #define BT_CONNECTED    4
+static byte bt_status = BT_INIT;
 
+/* Input status */
 #define BT_INPUT_INIT     0
 #define BT_INPUT_LF       1
 #define BT_INPUT_CR       2
 #define BT_INPUT_COMMAND  3
+static byte bt_input_status = BT_INPUT_INIT;
 
-#define COMMAND_BUFFER_LEN 10
-
+/* Command table
+ * used for interpretating Grove's chip notifications */
 #define COMMAND_INDEX_OK      0
 #define COMMAND_INDEX_BTSTATE 1
 #define COMMAND_INDEX_CONNECT 2
-
 #define COMMAND_TABLE_LEN     3
-
-//#define DEBUG(x) Serial.println(x)
-#define DEBUG(X) /* debug off */
-
-
-//use software serial
-static SoftwareSerial ss = SoftwareSerial(10,11);
-#define SERIAL_OUT(x) ss.write(x)
-#define SERIAL_IN     ss.read();
-
 static const char command_table[3][10] = { "OK", "BTSTATE:", "CONNECT:" };
 
-static byte bt_status = BT_INIT;
-static byte bt_input_status = BT_INPUT_INIT;
+/* Buffers */
 
-static circularBuffer serialDataBuffer;
+/* c_serial_buffer
+ * stores all de data received via bluetooth that is destinated to the end user.
+ * (that is, excluding all configuration and status notifications from the chip)
+*/
+static circularBuffer c_serial_buffer;
 
+/* command_buffer 
+ * stores Grove's cips notifications are stored. Having a separate buffer makes 
+ * management and interpretation easier.
+ * @see command_table
+ */
+#define COMMAND_BUFFER_LEN 10
 static struct  {
     char data[COMMAND_BUFFER_LEN];
     byte tail;
-} commandBuffer;
+} command_buffer;
+
+/* Serial Port Setup */
+// alias for serial functions, for easy switching between SW & HW serial implementation
+#define USE_SW_SERIAL
+
+#ifdef USE_SW_SERIAL
+    #define SERIAL_OUT(x) ss.write(x)
+    #define SERIAL_IN     ss.read();
+    static SoftwareSerial ss = SoftwareSerial(10,11);
+#else
+    #define SERIAL_OUT(x) Serial.write(x)
+    #define SERIAL_IN     Serial.read();
+#endif
+
+/* Debugging */
+// #define DEBUG(x) Serial.println(x) /* debug on */
+#define DEBUG(X) /* debug off */
 
 static boolean checkOK(char c);
 static void readChar(char c);
-
-//functions
 void groveSBT_loop();
 void groveSBT_send(char* text);
 static void interpretateCommand(char *command);
@@ -69,7 +86,7 @@ void groveSBT_sendCommand();
 inline byte groveSBT_status() { return bt_status; }
 void groveSBT_inq();
 
-//callbacks
+/* callbacks */
 static void dummy() {}
 
 void (*groveSBT_onInit)()       = dummy;
@@ -77,10 +94,12 @@ void (*groveSBT_onReady)()      = dummy;
 void (*groveSBT_onInquiring)()  = dummy;
 void (*groveSBT_onConnected)()  = dummy;
 void (*groveSBT_onConnecting)() = dummy;
+void (*groveSBT_onNewLine)()    = dummy;
 
-//function to be called by the main program's loop
+/* function to be called by the main program's loop */
 char c;
 void groveSBT_loop() {
+    // @to-do using SoftwareSerial.available() seems to crash sometimes
     c = SERIAL_IN
     if(c>0) {
         switch(bt_input_status) {
@@ -101,8 +120,8 @@ void groveSBT_loop() {
                     bt_input_status = BT_INPUT_CR;
                 } else if(c == '+' || bt_status != BT_CONNECTED) {
                     bt_input_status = BT_INPUT_COMMAND;
-                    commandBuffer.tail=0;
-                    commandBuffer.data[0]='\0';
+                    command_buffer.tail=0;
+                    command_buffer.data[0]='\0';
                 } else {
                     bt_input_status = BT_INPUT_INIT;
                 }
@@ -110,20 +129,22 @@ void groveSBT_loop() {
             
             case BT_INPUT_COMMAND:
                 if(c == CR) {
-                    interpretateCommand(commandBuffer.data);
+                    interpretateCommand(command_buffer.data);
                     bt_input_status = BT_INPUT_INIT;
                 } else {
-                    if(commandBuffer.tail < COMMAND_BUFFER_LEN-1) {
-                        commandBuffer.data[commandBuffer.tail] = c;
-                        commandBuffer.data[commandBuffer.tail+1] = '\0';
-                        commandBuffer.tail++;
+                    if(command_buffer.tail < COMMAND_BUFFER_LEN-1) {
+                        command_buffer.data[command_buffer.tail] = c;
+                        command_buffer.data[command_buffer.tail+1] = '\0';
+                        command_buffer.tail++;
                     }
                 }
                 break;
         }
         
-        if(bt_input_status != BT_INPUT_COMMAND && bt_status == BT_CONNECTED)
-            c_buffer_push(c, &serialDataBuffer);
+        if(bt_input_status != BT_INPUT_COMMAND && bt_status == BT_CONNECTED) {
+            if(c == CR) groveSBT_onNewLine();
+            c_buffer_push(c, &c_serial_buffer);
+        }
         
     }
 }
@@ -166,13 +187,14 @@ void interpretateCommand(char *command){
         }
 }
 
-boolean groveSBT_available() {
-   return (c_buffer_len(&serialDataBuffer)>0);
+/* returns the number of bytes available to be read */
+byte groveSBT_available() {
+   return (c_buffer_len(&c_serial_buffer));
 }
 
 char groveSBT_read() {
     char c=-1;
-    c_buffer_pull(&c, &serialDataBuffer);
+    c_buffer_pull(&c, &c_serial_buffer);
     return c;
 }
 
@@ -186,6 +208,7 @@ void groveSBT_write(char *txt) {
 
 void groveSBT_init() {
     ss.begin(9600);
+    c_buffer_init(&c_serial_buffer);
 }
 
 void groveSBT_inq(){
