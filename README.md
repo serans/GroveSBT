@@ -5,6 +5,10 @@ Arduino controller for the [Grove Serial Bluetooth module](http://www.seeedstudi
 
 ![GroveSBT](http://www.seeedstudio.com/wiki/images/thumb/6/66/Twigbt00.jpg/400px-Twigbt00.jpg "Grove Serial Bluetooth")
 
+Installation:
+Just put the ``GroveSBT`` folder into your arduino's libraries directories. On linux, this typically means:
+  * ``$HOME/sketchbook/libraries`` or
+  * ``usr/share/arduino/libraries`` if you want to make it available to all users
 
 Usage:
  * Include both ``<GroveSBT.h>`` and ``<SoftwareSerial.h>`` in your sketch
