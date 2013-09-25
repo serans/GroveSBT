@@ -2,7 +2,7 @@
  * @brief Bluetooth Grove 0.9 Interface for Arduino
  *
  * @see http://www.seeedstudio.com/wiki/Grove_-_Serial_Bluetooth
- * @author MH Serans
+ * @author M.H.Serans
  */
 #ifndef GROVESBT_H
 #define GROVESBT_H
@@ -142,8 +142,8 @@ void groveSBT_loop() {
         }
         
         if(bt_input_status != BT_INPUT_COMMAND && bt_status == BT_CONNECTED) {
-            if(c == CR) groveSBT_onNewLine();
             c_buffer_push(c, &c_serial_buffer);
+            if(c == '\n') groveSBT_onNewLine();
         }
         
     }
@@ -213,5 +213,9 @@ void groveSBT_init() {
 
 void groveSBT_inq(){
     SERIAL_OUT("\r\n+INQ=1\r\n");
+}
+
+boolean groveSBT_buffer_equals_string(char *txt) {
+    return c_buffer_equals_string(&c_serial_buffer,txt);
 }
 #endif
