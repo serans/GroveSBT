@@ -20,6 +20,6 @@ Usage:
    * ``groveSBT_onInquiring`` when the BT is inquiring
    * ``groveSBT_onConnecting`` when a connection is being stablished
    * ``groveSBT_onConnected`` when there's active connection. When disconnected, returns to the ready state and hence launches ``groveSBT_onReady``
-   * ``groveSBT_onNewLine`` invoked every time a CR character is read
+   * ``groveSBT_onNewLine`` invoked every time a LF character is read
  * Use ``groveSBT_inq()`` to begin inquiring, so that the device is discoverable.
  * Once the connection is stablished, use ``groveSBT_available()``, ``groveSBT_read()`` and ``groveSBT_write()`` to communicate.
