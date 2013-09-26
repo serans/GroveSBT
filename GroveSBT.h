@@ -62,11 +62,11 @@ static struct  {
 #define USE_SW_SERIAL
 
 #ifdef USE_SW_SERIAL
-    #define SERIAL_OUT(x) ss.write(x)
+    #define SERIAL_OUT(x) ss.print(x)
     #define SERIAL_IN     ss.read();
     static SoftwareSerial ss = SoftwareSerial(10,11);
 #else
-    #define SERIAL_OUT(x) Serial.write(x)
+    #define SERIAL_OUT(x) Serial.print(x)
     #define SERIAL_IN     Serial.read();
 #endif
 
