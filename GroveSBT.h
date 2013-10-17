@@ -12,8 +12,17 @@
 #include <SoftwareSerial.h>
 #include "CircularBuffer.h"
 
-#define CR 0x0D
-#define LF 0x0A
+#ifndef CR
+ #define CR 0x0D
+#endif
+
+#ifndef LF 
+ #define LF 0x0A
+#endif
+
+/* COMPILE OPTIONS */
+// #define DEBUG(x) Serial.println(x) /* debug on */
+#define DEBUG(X) /* debug off */
 
 /* Grove Serial Bluetooth Status */
 #define BT_INIT         0
@@ -59,9 +68,7 @@ static struct  {
 
 /* Serial Port Setup */
 // alias for serial functions, for easy switching between SW & HW serial implementation
-#define USE_SW_SERIAL
-
-#ifdef USE_SW_SERIAL
+#ifdef GBT_SW_SERIAL
     #define SERIAL_OUT(x) ss.print(x)
     #define SERIAL_IN     ss.read();
     static SoftwareSerial ss = SoftwareSerial(10,11);
@@ -69,10 +76,6 @@ static struct  {
     #define SERIAL_OUT(x) Serial.print(x)
     #define SERIAL_IN     Serial.read();
 #endif
-
-/* Debugging */
-// #define DEBUG(x) Serial.println(x) /* debug on */
-#define DEBUG(X) /* debug off */
 
 static boolean checkOK(char c);
 static void readChar(char c);
@@ -101,7 +104,13 @@ char c;
 void groveSBT_loop() {
     // @to-do using SoftwareSerial.available() seems to crash sometimes
     c = SERIAL_IN
+    
     if(c>0) {
+        /* 
+        Serial.print("[[");
+        Serial.print(c);
+        Serial.print("]]");
+        /* */
         switch(bt_input_status) {
             case BT_INPUT_INIT:
                 if(c == CR) 
@@ -164,27 +173,27 @@ void interpretateCommand(char *command){
         for(j=0; command_table[i][j] == command[j]; j++) {
             if(command_table[i][j+1]=='\0') {
                 j++;
-                goto command_found; //that's right, I'm using goto.
+                if(i == COMMAND_INDEX_BTSTATE) {
+                    bt_status = command[j]-'0';
+                    
+                    if(bt_status>4) {
+		                bt_status=1;
+		                return;
+	                }
+
+                    if(bt_status == BT_INIT)             groveSBT_onInit();
+                    else if (bt_status == BT_READY)      groveSBT_onReady();
+                    else if (bt_status == BT_INQUIRING)  groveSBT_onInquiring();
+                    else if (bt_status == BT_CONNECTING) groveSBT_onConnecting();
+                    else if (bt_status == BT_CONNECTED)  groveSBT_onConnected();
+                    
+                    return;
+                }
             }
         }
     }
     
-    return;
-    
-    command_found:
-        if(i == COMMAND_INDEX_BTSTATE) {
-            bt_status = atoi(&command[j]);
-            if(bt_status<0 || bt_status>4) {
-		        bt_status=1;
-		        return;
-	        }
 
-            if(bt_status == BT_INIT)             groveSBT_onInit();
-            else if (bt_status == BT_READY)      groveSBT_onReady();
-            else if (bt_status == BT_INQUIRING)  groveSBT_onInquiring();
-            else if (bt_status == BT_CONNECTING) groveSBT_onConnecting();
-            else if (bt_status == BT_CONNECTED)  groveSBT_onConnected();
-        }
 }
 
 /* returns the number of bytes available to be read */
@@ -207,7 +216,12 @@ void groveSBT_write(char *txt) {
 }
 
 void groveSBT_init() {
+    #ifdef GBT_SW_SERIAL
     ss.begin(9600);
+    #else
+    Serial.begin(9600);
+    #endif
+    
     c_buffer_init(&c_serial_buffer);
 }
 
