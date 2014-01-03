@@ -23,3 +23,10 @@ Usage:
    * ``groveSBT_onNewLine`` invoked every time a LF character is read
  * Use ``groveSBT_inq()`` to begin inquiring, so that the device is discoverable.
  * Once the connection is stablished, use ``groveSBT_available()``, ``groveSBT_read()`` and ``groveSBT_write()`` to communicate.
+
+
+Licence
+========
+All source code in this project is
+  * (c) MH Serans, unless stated otherwise
+  * Available under the MIT licence, unless stated otherwise (see LICENCE.txt)
